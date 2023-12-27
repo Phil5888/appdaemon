@@ -3,7 +3,8 @@ from typing import List
 from typing import Any
 from dataclasses import dataclass
 import json
-from conf.apps.model.influx_write_event import InfluxWriteEvent
+from model.influx_write_event import InfluxWriteEvent
+
 
 @dataclass
 class HomeInfo:
@@ -13,12 +14,13 @@ class HomeInfo:
     power_unit: str
 
     @staticmethod
-    def from_dict(obj: Any) -> 'HomeInfo':
+    def from_dict(obj: Any) -> "HomeInfo":
         _home_name = str(obj.get("home_name"))
         _home_img = str(obj.get("home_img"))
         _charging_power = str(obj.get("charging_power"))
         _power_unit = str(obj.get("power_unit"))
         return HomeInfo(_home_name, _home_img, _charging_power, _power_unit)
+
 
 @dataclass
 class PpsInfo:
@@ -30,7 +32,7 @@ class PpsInfo:
     pps_status: int
 
     @staticmethod
-    def from_dict(obj: Any) -> 'PpsInfo':
+    def from_dict(obj: Any) -> "PpsInfo":
         _pps_list = [x for x in obj.get("pps_list")]
         _total_charging_power = str(obj.get("total_charging_power"))
         _power_unit = str(obj.get("power_unit"))
@@ -38,6 +40,7 @@ class PpsInfo:
         _updated_time = str(obj.get("updated_time"))
         _pps_status = int(obj.get("pps_status"))
         return PpsInfo(_pps_list, _total_charging_power, _power_unit, _total_battery_power, _updated_time, _pps_status)
+
 
 @dataclass
 class SolarbankList:
@@ -58,7 +61,7 @@ class SolarbankList:
     create_time: int
 
     @staticmethod
-    def from_dict(obj: Any) -> 'SolarbankList':
+    def from_dict(obj: Any) -> "SolarbankList":
         _device_pn = str(obj.get("device_pn"))
         _device_sn = str(obj.get("device_sn"))
         _device_name = str(obj.get("device_name"))
@@ -76,6 +79,7 @@ class SolarbankList:
         _create_time = int(obj.get("create_time"))
         return SolarbankList(_device_pn, _device_sn, _device_name, _device_img, _battery_power, _bind_site_status, _charging_power, _power_unit, _charging_status, _status, _wireless_type, _main_version, _photovoltaic_power, _output_power, _create_time)
 
+
 @dataclass
 class SolarbankInfo:
     solarbank_list: List[SolarbankList]
@@ -88,7 +92,7 @@ class SolarbankInfo:
     total_output_power: str
 
     @staticmethod
-    def from_dict(obj: Any) -> 'SolarbankInfo':
+    def from_dict(obj: Any) -> "SolarbankInfo":
         _solarbank_list = [SolarbankList.from_dict(y) for y in obj.get("solarbank_list")]
         _total_charging_power = str(obj.get("total_charging_power"))
         _power_unit = str(obj.get("power_unit"))
@@ -107,7 +111,7 @@ class Statistic:
     unit: str
 
     @staticmethod
-    def from_dict(obj: Any) -> 'Statistic':
+    def from_dict(obj: Any) -> "Statistic":
         _type = str(obj.get("type"))
         _total = str(obj.get("total"))
         _unit = str(obj.get("unit"))
@@ -128,7 +132,7 @@ class SolixInfo:
     site_id: str
 
     @staticmethod
-    def from_dict(obj: Any) -> 'SolixInfo':
+    def from_dict(obj: Any) -> "SolixInfo":
         _home_info = HomeInfo.from_dict(obj.get("home_info"))
         _solar_list = [x for x in obj.get("solar_list")]
         _pps_info = PpsInfo.from_dict(obj.get("pps_info"))
@@ -142,9 +146,7 @@ class SolixInfo:
         return SolixInfo(_home_info, _solar_list, _pps_info, _statistics, _topology_type, _solarbank_info, _retain_load, _updated_time, _power_site_type, _site_id)
 
 
-
 class SolixClientApp(Mqtt):
-
     def initialize(self):
         self.set_namespace("mqtt")
         self.mqtt_subscribe("solix/site/PhilsHome/scenInfo")
@@ -158,7 +160,7 @@ class SolixClientApp(Mqtt):
             if len(data) == 0:
                 self.log("SolixClientApp :: MQTT message :: Received with no data", level="WARNING")
                 return
-            
+
             if data.get("topic") != "solix/site/PhilsHome/scenInfo":
                 return
             self.log(f"SolixClientApp :: MQTT message :: Topic {data['topic']} received", level="INFO")
@@ -167,19 +169,9 @@ class SolixClientApp(Mqtt):
             influx_data = []
 
             for solarbank in solix_info.solarbank_info.solarbank_list:
-                influx_data.append({
-                    "measurement": solarbank.device_name,
-                    "tags": {                    },
-                    "fields": {
-                        "battery_power": solarbank.battery_power,
-                        "charging_power": solarbank.charging_power,
-                        "photovoltaic_power": solarbank.photovoltaic_power,
-                        "output_power": solarbank.output_power
-                    }
-                })
+                influx_data.append({"measurement": solarbank.device_name, "tags": {}, "fields": {"battery_power": solarbank.battery_power, "charging_power": solarbank.charging_power, "photovoltaic_power": solarbank.photovoltaic_power, "output_power": solarbank.output_power}})
 
             influx_write_event = InfluxWriteEvent("home", "solix", json.dumps(influx_data))
             self.mqtt_publish("influx/write", influx_write_event.to_json(), namespace="mqtt")
         except Exception as e:
             self.log("SolixClientApp :: MQTT message :: Error in MQTT message received: {}".format(e), level="ERROR")
-

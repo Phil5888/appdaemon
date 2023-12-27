@@ -1,7 +1,7 @@
 from appdaemon.plugins.mqtt.mqttapi import Mqtt
 from influxdb_client import InfluxDBClient
 from influxdb_client.client.write_api import SYNCHRONOUS
-from conf.apps.model.influx_write_event import InfluxWriteEvent
+from model.influx_write_event import InfluxWriteEvent
 
 from dotenv import load_dotenv
 
@@ -12,28 +12,28 @@ import json
 # Load environment variables from .env file
 load_dotenv()
 
-    
+
 class InfluxConfig:
-    '''InfluxDB Config Class'''
-        
+    """InfluxDB Config Class"""
+
     def __init__(self):
-        '''InfluxDB Config'''
+        """InfluxDB Config"""
 
         self.influxdb_url = os.getenv("INFLUXDB_URL", "http://192.168.5.57:8086")
         self.influxdb_token = os.getenv("INFLUXDB_TOKEN", "TOKEN")
         self.influxdb_org = os.getenv("INFLUXDB_ORG", "home")
 
+
 class InfluxWriterApp(Mqtt):
-    ''''''
+    """"""
 
     def initialize(self):
-        '''Initialize'''
+        """Initialize"""
 
         self.influx_config = InfluxConfig()
         self.set_namespace("mqtt")
         self.mqtt_subscribe("influx/write")
         self.listen_event(self.mqtt_message_received_event)
-
 
     def create_bucket(self, bucket, org_id):
         """Create a bucket"""
@@ -42,23 +42,23 @@ class InfluxWriterApp(Mqtt):
         response = requests.post(f"{self.influx_config.influxdb_url}/api/v2/buckets", headers=headers, json=payload, timeout=2)
 
         if response.status_code == 201:
-           self.log(f"InfluxWriterApp :: Management :: influxdb bucket {bucket} created.", level="INFO")
+            self.log(f"InfluxWriterApp :: Management :: influxdb bucket {bucket} created.", level="INFO")
 
         else:
             self.log(f"InfluxWriterApp :: Management :: error creating influxdb bucket {bucket}.", level="ERROR")
 
-    def _json_object_hook(self,dct):
-            # Convert numeric strings back to int or float
-            for key, value in dct.items():
-                if isinstance(value, str) and value.replace(".", "", 1).isdigit():
-                    if "." in value:
-                        dct[key] = float(value)
-                    else:
-                        dct[key] = int(value)
-            return dct
+    def _json_object_hook(self, dct):
+        # Convert numeric strings back to int or float
+        for key, value in dct.items():
+            if isinstance(value, str) and value.replace(".", "", 1).isdigit():
+                if "." in value:
+                    dct[key] = float(value)
+                else:
+                    dct[key] = int(value)
+        return dct
 
     def mqtt_message_received_event(self, event_name, data, kwargs):
-        '''Write to Influx'''
+        """Write to Influx"""
 
         if not data.get("topic"):
             return
@@ -87,11 +87,10 @@ class InfluxWriterApp(Mqtt):
 
         if len(current_bucket.buckets) > 1:
             self.log(f"InfluxWriterApp :: influxdb :: bucket {influx_write_event.bucket} has more than one bucket. please check.")
-        else:        
+        else:
             write_api = client.write_api(write_options=SYNCHRONOUS)
-            data = json.loads(influx_write_event.data,object_hook=self._json_object_hook)
+            data = json.loads(influx_write_event.data, object_hook=self._json_object_hook)
             write_api.write(org=influx_write_event.org, bucket=influx_write_event.bucket, record=data)
 
             self.log(f"InfluxWriterApp :: influxdb :: writing data to bucket {influx_write_event.bucket} successful.")
         client.close()
-
