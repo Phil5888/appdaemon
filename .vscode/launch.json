@@ -10,7 +10,8 @@
             "request": "launch",
             "module": "appdaemon",
             "justMyCode": true,
-            "args": "-c /home/hass/ad_config/dev_test --toml"
+            // "args": "-c /home/hass/ad_config/dev_test --toml"
+            "args": "-c conf/"
         },
     ]
 }
