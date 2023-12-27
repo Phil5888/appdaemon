@@ -332,7 +332,8 @@ class SunriseWakeupApp(Hass):
             # self.log(f"WakeupApp :: ROUTINE :: Runtime: {runtime_since_start.seconds} seconds | RGB Helper: {rgb_helper_current_percent:.2f}% Brightness: {lights_brightness_current_percent:.2f}% | Volume: {media_player_volume_current_percent:.2f}%", level="INFO")
             self.run_in(self.wakeup_routine, 1)
         else:
-            self.log("WakeupApp :: ROUTINE :: Wake up routine was ended", level="INFO")
+            self.log("WakeupApp :: ROUTINE :: Wake up routine ended", level="INFO")
+            self.stop_sunrise_routine()
 
 
 
