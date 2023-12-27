@@ -196,7 +196,7 @@ class SunriseWakeupApp(Hass):
             self.log("WakeupApp :: EVENT :: No Light or Media Player defined", level="INFO")
             return
 
-        self.log("WakeupApp :: EVENT :: End Time: {self.wakeup_config.app_automatic_end_time}", level="INFO")
+        self.log(f"WakeupApp :: EVENT :: End Time: {self.wakeup_config.routine_automatic_end_time}", level="INFO")
 
         self.lights_brightness_current = self.wakeup_config.lights_brightness_initial
         self.lights_rgb_helper_current = self.wakeup_config.lights_rgb_helper
@@ -205,6 +205,23 @@ class SunriseWakeupApp(Hass):
 
         # log the initial state, and config values including dynamic values
         self.log(f"WakeupApp :: SETTINGS :: Max Runtime: {self.wakeup_config.max_sunrise_wakeup_runtime_in_seconds} seconds | Lights Max Brightness: {self.wakeup_config.lights_max_brightness:.2f} | Media Player Max Volume: {self.wakeup_config.media_player_max_volume:.2f} | Dynamic Lights Brightness Step Size: {self.wakeup_config.dynamic_lights_brightness_step_size:.2f} | Dynamic Lights RGB Step Size: {self.wakeup_config.dynamic_lights_rgb_step_size:.2f} | Dynamic Media Player Volume Step Size: {self.wakeup_config.dynamic_media_player_volume_step_size:.2f}", level="INFO")
+
+        # Check current state of the devices
+        for light_id in self.start_wakeup_event.light_ids:
+            light_state = self.get_state(light_id)
+            if light_state == "on":
+                self.log(f"WakeupApp :: EVENT :: Light: {light_id} is already on. Will not start wakeup routine", level="INFO")
+                self.sunrise_wakeup_running = False
+                self.abort_sunrise_wakeup = True
+                return
+            
+        for media_player in self.start_wakeup_event.media_players:
+            media_player_state = self.get_state(media_player)
+            if media_player_state == "playing":
+                self.log(f"WakeupApp :: EVENT :: Media Player: {media_player} is already playing. Will not start wakeup routine", level="INFO")
+                self.sunrise_wakeup_running = False
+                self.abort_sunrise_wakeup = True
+                return
 
         # We only want to start the routine if all devices are ready (lights = on and media player = playing)
         for light_id in self.start_wakeup_event.light_ids:
