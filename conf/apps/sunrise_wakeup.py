@@ -84,7 +84,8 @@ class WakeupConfig:
 
     def __init__(self, event_config: EventConfig) -> None:
         """Initialize the Wake Up Config"""
-        self.app_automatic_end_time = datetime.now() + timedelta(seconds=event_config.max_sunrise_wakeup_runtime * 60)
+        self.routine_start_time = datetime.now()
+        self.routine_automatic_end_time = self.routine_start_time  + timedelta(seconds=event_config.max_sunrise_wakeup_runtime * 60)
 
         self.lights_rgb_helper = 0
         self.lights_rgb_helper_max = 100
@@ -95,13 +96,16 @@ class WakeupConfig:
         self.media_players_volume_initial = 0.02
 
         self.max_sunrise_wakeup_runtime_in_seconds = event_config.max_sunrise_wakeup_runtime * 60
+
         self.lights_max_brightness = event_config.lights_max_brightness
-        self.media_player_max_volume = event_config.media_players_max_volume
         self.lights_max_brightness_after_in_seconds = event_config.lights_max_brightness_after * 60
+
+        self.media_player_max_volume = event_config.media_players_max_volume
         self.media_player_max_volume_after_in_seconds = event_config.media_players_max_volume_after * 60
 
         self.dynamic_lights_brightness_step_size = self.lights_max_brightness / self.lights_max_brightness_after_in_seconds
-        self.dynamic_lights_rgb_step_size = 240 / self.lights_max_brightness_after_in_seconds
+        self.dynamic_lights_rgb_step_size = self.lights_rgb_helper_max / (self.lights_max_brightness_after_in_seconds * 0.5)
+
         self.dynamic_media_player_volume_step_size = self.media_player_max_volume / self.media_player_max_volume_after_in_seconds
 
         self.media_playlist = "spotify://88b68d2d78123f3a3850a0703d6729a2/spotify:playlist:43Q9LvUErcQvo4YzG2wd5k"
@@ -200,7 +204,7 @@ class SunriseWakeupApp(Hass):
         self.media_players_volume_current = self.wakeup_config.media_players_volume_initial
 
         # log the initial state, and config values including dynamic values
-        self.log(f"WakeupApp :: SETTINGS :: Max Runtime: {self.wakeup_config.max_sunrise_wakeup_runtime_in_seconds} seconds | Lights Max Brightness: {self.wakeup_config.lights_max_brightness} | Media Player Max Volume: {self.wakeup_config.media_player_max_volume} | Dynamic Lights Brightness Step Size: {self.wakeup_config.dynamic_lights_brightness_step_size} | Dynamic Lights RGB Step Size: {self.wakeup_config.dynamic_lights_rgb_step_size} | Dynamic Media Player Volume Step Size: {self.wakeup_config.dynamic_media_player_volume_step_size}", level="INFO")
+        self.log(f"WakeupApp :: SETTINGS :: Max Runtime: {self.wakeup_config.max_sunrise_wakeup_runtime_in_seconds} seconds | Lights Max Brightness: {self.wakeup_config.lights_max_brightness:.2f} | Media Player Max Volume: {self.wakeup_config.media_player_max_volume:.2f} | Dynamic Lights Brightness Step Size: {self.wakeup_config.dynamic_lights_brightness_step_size:.2f} | Dynamic Lights RGB Step Size: {self.wakeup_config.dynamic_lights_rgb_step_size:.2f} | Dynamic Media Player Volume Step Size: {self.wakeup_config.dynamic_media_player_volume_step_size:.2f}", level="INFO")
 
         # We only want to start the routine if all devices are ready (lights = on and media player = playing)
         for light_id in self.start_wakeup_event.light_ids:
@@ -263,7 +267,7 @@ class SunriseWakeupApp(Hass):
     def max_wakeup_time_reached(self) -> bool:
         """Check if max runtime reached"""
 
-        if datetime.now() > self.wakeup_config.app_automatic_end_time:
+        if datetime.now() > self.wakeup_config.routine_automatic_end_time:
             self.log("WakeupApp :: ROUTINE :: Max Runtime reached", level="INFO")
             return True
         return False
@@ -272,14 +276,14 @@ class SunriseWakeupApp(Hass):
         """Wakeup routine"""
         
         if not self.max_wakeup_time_reached() and not self.abort_sunrise_wakeup:
-            self.log("WakeupApp :: ROUTINE :: Increase volume and brightness", level="INFO")
+            
             self.lights_brightness_current += self.wakeup_config.dynamic_lights_brightness_step_size
             if self.lights_brightness_current >= self.wakeup_config.lights_max_brightness:
                 self.lights_brightness_current = self.wakeup_config.lights_max_brightness
                 
             self.lights_rgb_helper_current += self.wakeup_config.dynamic_lights_rgb_step_size
-            if self.lights_rgb_helper_current >= 100:
-                self.lights_rgb_helper_current = 100
+            if self.lights_rgb_helper_current >= self.wakeup_config.lights_rgb_helper_max:
+                self.lights_rgb_helper_current = self.wakeup_config.lights_rgb_helper_max
             
             self.lights_rgb_color_current = [240, self.lights_rgb_helper_current, 40]
 
@@ -287,7 +291,8 @@ class SunriseWakeupApp(Hass):
             if self.media_players_volume_current >= self.wakeup_config.media_player_max_volume:
                 self.media_players_volume_current = self.wakeup_config.media_player_max_volume
 
-            self.log(f"WakeupApp :: ROUTINE :: RGB Helper: {self.lights_rgb_helper_current} Brightness: {self.lights_brightness_current}", level="INFO")        
+
+            
             for light_id in self.start_wakeup_event.light_ids:
                 self.call_service(
                     "light/turn_on",
@@ -296,12 +301,19 @@ class SunriseWakeupApp(Hass):
                     rgb_color=self.lights_rgb_color_current,
                     transition=1,
                 )
-            self.log(f"WakeupApp :: ROUTINE :: Volume: {self.media_players_volume_current}", level="INFO")
+
             for media_player in self.start_wakeup_event.media_players:
                 self.call_service(
                     "media_player/volume_set", entity_id=media_player, volume_level=self.media_players_volume_current
                 )
-            self.run_in(self.wakeup_routine, 5)
+
+
+            # runtime_since_start = datetime.now() - self.wakeup_config.routine_start_time
+            # media_player_volume_current_percent = self.media_players_volume_current / self.wakeup_config.media_player_max_volume * 100
+            # rgb_helper_current_percent = self.lights_rgb_helper_current / self.wakeup_config.lights_rgb_helper_max * 100
+            # lights_brightness_current_percent = self.lights_brightness_current / self.wakeup_config.lights_max_brightness * 100
+            # self.log(f"WakeupApp :: ROUTINE :: Runtime: {runtime_since_start.seconds} seconds | RGB Helper: {rgb_helper_current_percent:.2f}% Brightness: {lights_brightness_current_percent:.2f}% | Volume: {media_player_volume_current_percent:.2f}%", level="INFO")
+            self.run_in(self.wakeup_routine, 1)
         else:
             self.log("WakeupApp :: ROUTINE :: Wake up routine was ended", level="INFO")
 
