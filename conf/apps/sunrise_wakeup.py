@@ -76,9 +76,21 @@ class StartWakeupEvent:
 
     @staticmethod
     def from_dict(obj: Any) -> "StartWakeupEvent":
-        _light_ids_sunrise_color = [str(x) for x in obj.get("light_ids_sunrise_color")]
-        _light_ids_static_color = [str(x) for x in obj.get("light_ids_static_color")]
-        _media_players = [str(x) for x in obj.get("media_players")]
+        if obj.get("light_ids_sunrise_color") is not None:
+            _light_ids_sunrise_color = [str(x) for x in obj.get("light_ids_sunrise_color")]
+        else:
+            _light_ids_sunrise_color = []
+
+        if obj.get("light_ids_static_color") is not None:
+            _light_ids_static_color = [str(x) for x in obj.get("light_ids_static_color")]
+        else:
+            _light_ids_static_color = []
+
+        if obj.get("media_players") is not None:
+            _media_players = [str(x) for x in obj.get("media_players")]
+        else:
+            _media_players = []
+
         _event_config = EventConfig.from_dict(obj.get("config"))
         _metadata = Metadata.from_dict(obj.get("metadata"))
         return StartWakeupEvent(_light_ids_sunrise_color, _light_ids_static_color, _media_players, _event_config, _metadata)
@@ -216,8 +228,10 @@ class SunriseWakeupApp(Hass):
         if self.start_wakeup_event.media_players is None:
             self.start_wakeup_event.media_players = []
 
-        if len(self.start_wakeup_event.light_ids_sunrise_color + self.start_wakeup_event.light_ids_static_color) == 0 or len(self.start_wakeup_event.media_players) == 0:
+        if len(self.start_wakeup_event.light_ids_sunrise_color + self.start_wakeup_event.light_ids_static_color) == 0 and len(self.start_wakeup_event.media_players) == 0:
             self.log("WakeupApp :: EVENT :: No Light or Media Player defined", level="INFO")
+            self.sunrise_wakeup_running = False
+            self.abort_sunrise_wakeup = False
             return
 
         self.log(f"WakeupApp :: EVENT :: End Time: {self.wakeup_config.routine_automatic_end_time}", level="INFO")
