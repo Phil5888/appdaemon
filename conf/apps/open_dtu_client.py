@@ -15,7 +15,7 @@ class OpenDtuClientApp(Mqtt):
             if not data.get("topic"):
                 return
             if len(data) == 0:
-                self.log("SolixClientApp :: MQTT message :: Received with no data", level="WARNING")
+                self.log("OpenDtuClientApp :: MQTT message :: Received with no data", level="WARNING")
                 return
 
             # split the topic in parts
@@ -29,4 +29,4 @@ class OpenDtuClientApp(Mqtt):
             self.mqtt_publish("influx/write", influx_write_event.to_json(), namespace="mqtt")
 
         except Exception as e:
-            self.log("SolixClientApp :: MQTT message :: Error in MQTT message received: {}".format(e), level="ERROR")
+            self.log("OpenDtuClientApp :: MQTT message :: Error in MQTT message received: {}".format(e), level="ERROR")
