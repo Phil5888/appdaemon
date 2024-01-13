@@ -19,7 +19,7 @@ class InfluxConfig:
     def __init__(self):
         """InfluxDB Config"""
 
-        self.influxdb_url = os.getenv("INFLUXDB_URL", "http://192.168.5.57:8086")
+        self.influxdb_url = os.getenv("INFLUXDB_URL", "http://influxdb.phil.local:8086")
         self.influxdb_token = os.getenv("INFLUXDB_TOKEN", "TOKEN")
         self.influxdb_org = os.getenv("INFLUXDB_ORG", "home")
 
