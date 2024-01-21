@@ -25,7 +25,7 @@ class OpenDtuClientApp(Mqtt):
                 influx_data = []
                 influx_data.append({"measurement": topic_parts[2], "tags": {}, "fields": {topic_parts[3]: data.get("payload")}})
 
-                influx_write_event = InfluxWriteEvent("home", "solar_test", json.dumps(influx_data))
+                influx_write_event = InfluxWriteEvent("home", "solar", json.dumps(influx_data))
                 self.mqtt_publish("influx/write", influx_write_event.to_json(), namespace="mqtt")
 
         except Exception as e:
