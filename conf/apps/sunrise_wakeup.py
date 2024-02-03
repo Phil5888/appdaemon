@@ -213,7 +213,7 @@ class SunriseWakeupApp(Hass):
     #         self.log("WakeupApp :: ROUTINE :: Start increase volume and brightness", level="INFO")
     #         self.run_in(self.wakeup_routine, 4)
 
-    def check_devices_ready(self):
+    def check_devices_ready(self, kwargs):
         """Check if all devices are ready to start"""
 
         for light_id in self.start_wakeup_event.light_ids_sunrise_color + self.start_wakeup_event.light_ids_static_color:
