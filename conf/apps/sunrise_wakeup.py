@@ -142,9 +142,12 @@ class SunriseWakeupApp(Hass):
     lights_rgb_color_current = []
     media_players_volume_current: float = 0.00
 
+    retry_count: int = 0
+    max_retry_count: int = 5
+
     ready_devices = []
-    devices_ready_to_start_handles = []
-    state_change_handles = []
+    # devices_ready_to_start_handles = []
+    # state_change_handles = []
 
     def initialize(self):
         """Initialize the app"""
@@ -159,54 +162,91 @@ class SunriseWakeupApp(Hass):
             self.wakeup_config.lights_brightness_initial = 1
 
         for light_id in start_wakeup_event.light_ids_sunrise_color:
-            self.call_service(
-                "light/turn_on",
-                entity_id=light_id,
-                brightness=self.wakeup_config.lights_brightness_initial,
-                rgb_color=self.wakeup_config.lights_rgb_color_initial,
-                transition=0,
-            )
+            if light_id not in self.ready_devices:
+                self.call_service(
+                    "light/turn_on",
+                    entity_id=light_id,
+                    brightness=self.wakeup_config.lights_brightness_initial,
+                    rgb_color=self.wakeup_config.lights_rgb_color_initial,
+                    transition=0,
+                )
 
         for light_id in start_wakeup_event.light_ids_static_color:
-            self.call_service(
-                "light/turn_on",
-                entity_id=light_id,
-                brightness=self.wakeup_config.lights_brightness_initial,
-                rgb_color=self.wakeup_config.lights_static_rgb_color,
-                transition=0,
-            )
+            if light_id not in self.ready_devices:
+                self.call_service(
+                    "light/turn_on",
+                    entity_id=light_id,
+                    brightness=self.wakeup_config.lights_brightness_initial,
+                    rgb_color=self.wakeup_config.lights_static_rgb_color,
+                    transition=0,
+                )
 
-            self.log(f"WakeupApp :: ROUTINE :: Light: {light_id} set to initial state", level="INFO")
         for media_player in start_wakeup_event.media_players:
-            self.call_service(
-                "media_player/volume_set",
-                entity_id=media_player,
-                volume_level=self.wakeup_config.media_players_volume_initial,
-            )
+            if media_player not in self.ready_devices:
+                self.call_service(
+                    "media_player/volume_set",
+                    entity_id=media_player,
+                    volume_level=self.wakeup_config.media_players_volume_initial,
+                )
 
         self.log("WakeupApp :: ROUTINE :: Initial State set", level="INFO")
 
-    def devices_ready_to_start(self, entity, attribute, old, new, kwargs):
+    # def devices_ready_to_start(self, entity, attribute, old, new, kwargs):
+    #     """Check if all devices are ready to start"""
+
+    #     self.log(f"WakeupApp :: ROUTINE :: Device: {entity} with new state: {new}", level="INFO")
+    #     if (new == "on" or new == "playing") and entity not in self.ready_devices:
+    #         self.ready_devices.append(entity)
+
+    #     if len(self.ready_devices) == len(self.start_wakeup_event.light_ids_sunrise_color + self.start_wakeup_event.light_ids_static_color + self.start_wakeup_event.media_players):
+    #         self.log("WakeupApp :: ROUTINE :: All devices ready to start", level="INFO")
+    #         self.ready_devices = []
+    #         for handle in self.devices_ready_to_start_handles:
+    #             self.cancel_listen_state(handle)
+    #         self.devices_ready_to_start_handles = []
+
+    #         for light_id in self.start_wakeup_event.light_ids_sunrise_color + self.start_wakeup_event.light_ids_static_color:
+    #             self.state_change_handles.append(self.listen_state(self.device_state_changed, light_id))
+    #         for media_player in self.start_wakeup_event.media_players:
+    #             self.state_change_handles.append(self.listen_state(self.device_state_changed, media_player))
+
+    #         self.log("WakeupApp :: ROUTINE :: Start increase volume and brightness", level="INFO")
+    #         self.run_in(self.wakeup_routine, 4)
+
+    def check_devices_ready(self):
         """Check if all devices are ready to start"""
 
-        self.log(f"WakeupApp :: ROUTINE :: Device: {entity} with new state: {new}", level="INFO")
-        if (new == "on" or new == "playing") and entity not in self.ready_devices:
-            self.ready_devices.append(entity)
+        for light_id in self.start_wakeup_event.light_ids_sunrise_color + self.start_wakeup_event.light_ids_static_color:
+            if light_id not in self.ready_devices:
+                light_state = self.get_state(light_id)
+                if light_state == "on":
+                    self.log(f"WakeupApp :: EVENT :: Light: {light_id} is now ready", level="INFO")
+                    self.ready_devices.append(light_id)
 
-        if len(self.ready_devices) == len(self.start_wakeup_event.light_ids_sunrise_color + self.start_wakeup_event.light_ids_static_color + self.start_wakeup_event.media_players):
-            self.log("WakeupApp :: ROUTINE :: All devices ready to start", level="INFO")
-            self.ready_devices = []
-            for handle in self.devices_ready_to_start_handles:
-                self.cancel_listen_state(handle)
-            self.devices_ready_to_start_handles = []
+        for media_player in self.start_wakeup_event.media_players:
+            if media_player not in self.ready_devices:
+                media_player_state = self.get_state(media_player)
+                if media_player_state == "playing":
+                    self.log(f"WakeupApp :: EVENT :: Media Player: {media_player} is now ready", level="INFO")
+                    self.ready_devices.append(media_player)
 
-            for light_id in self.start_wakeup_event.light_ids_sunrise_color + self.start_wakeup_event.light_ids_static_color:
-                self.state_change_handles.append(self.listen_state(self.device_state_changed, light_id))
-            for media_player in self.start_wakeup_event.media_players:
-                self.state_change_handles.append(self.listen_state(self.device_state_changed, media_player))
-
-            self.log("WakeupApp :: ROUTINE :: Start increase volume and brightness", level="INFO")
-            self.run_in(self.wakeup_routine, 4)
+        if len(self.ready_devices) != len(self.start_wakeup_event.light_ids_sunrise_color + self.start_wakeup_event.light_ids_static_color + self.start_wakeup_event.media_players):
+            for device in self.start_wakeup_event.light_ids_sunrise_color + self.start_wakeup_event.light_ids_static_color + self.start_wakeup_event.media_players:
+                if device not in self.ready_devices:
+                    self.log(f"WakeupApp :: ROUTINE :: Device: {device} not ready", level="INFO")
+            self.retry_count += 1
+            if self.retry_count < self.max_retry_count:
+                self.set_initial_devices_state(self.start_wakeup_event)
+                self.run_in(self.check_devices_ready, 5)
+            else:
+                if len(self.ready_devices) == 0:
+                    self.log("WakeupApp :: ROUTINE :: No devices are ready to start. Aborting", level="WARNING")
+                    self.stop_sunrise_routine()
+                    return
+                else:
+                    self.log("WakeupApp :: ROUTINE :: Not all devices are ready to start. Starting with available devices", level="WARNING")
+        self.log("WakeupApp :: ROUTINE :: Start increase volume and brightness", level="INFO")
+        self.run_in(self.wakeup_routine, 4)
 
     def start_event_sunrise_wakeup(self, event_name, data, kwargs):
         """Sunrise Wake Up start event handler"""
@@ -265,24 +305,27 @@ class SunriseWakeupApp(Hass):
                 return
 
         # We only want to start the routine if all devices are ready (lights = on and media player = playing)
-        for light_id in self.start_wakeup_event.light_ids_sunrise_color + self.start_wakeup_event.light_ids_static_color:
-            self.devices_ready_to_start_handles.append(self.listen_state(self.devices_ready_to_start, light_id))
-        for media_player in self.start_wakeup_event.media_players:
-            self.devices_ready_to_start_handles.append(self.listen_state(self.devices_ready_to_start, media_player))
+        # for light_id in self.start_wakeup_event.light_ids_sunrise_color + self.start_wakeup_event.light_ids_static_color:
+        #     self.devices_ready_to_start_handles.append(self.listen_state(self.devices_ready_to_start, light_id))
+        # for media_player in self.start_wakeup_event.media_players:
+        #     self.devices_ready_to_start_handles.append(self.listen_state(self.devices_ready_to_start, media_player))
+
+        # call method every 5 seconds to check if all devices are ready to start
 
         self.set_initial_devices_state(self.start_wakeup_event)
+        self.run_in(self.check_devices_ready, 5)
 
-        self.call_service(
-            "media_player/play_media",
-            entity_id=self.start_wakeup_event.media_players[0],
-            media_content_id=self.wakeup_config.media_playlist,
-            media_content_type="playlist",
-        )
+        # self.call_service(
+        #     "media_player/play_media",
+        #     entity_id=self.start_wakeup_event.media_players[0],
+        #     media_content_id=self.wakeup_config.media_playlist,
+        #     media_content_type="playlist",
+        # )
 
-        self.call_service(
-            "media_player/media_play",
-            entity_id=self.start_wakeup_event.media_players[0],
-        )
+        # self.call_service(
+        #     "media_player/media_play",
+        #     entity_id=self.start_wakeup_event.media_players[0],
+        # )
 
     def turn_off_devices(self):
         """Turn off devices"""
@@ -296,12 +339,13 @@ class SunriseWakeupApp(Hass):
         """Stop the sunrise routine"""
 
         self.log("WakeupApp :: ROUTINE :: Stopping", level="INFO")
-        for handle in self.state_change_handles:
-            self.cancel_listen_state(handle)
-        self.state_change_handles = []
+        # for handle in self.state_change_handles:
+        #     self.cancel_listen_state(handle)
+        # self.state_change_handles = []
 
         self.sunrise_wakeup_running = False
         self.abort_sunrise_wakeup = True
+        self.retry_count = 0
 
         self.turn_off_devices()
 
@@ -349,24 +393,28 @@ class SunriseWakeupApp(Hass):
                 self.media_players_volume_current = self.wakeup_config.media_player_max_volume
 
             for light_id in self.start_wakeup_event.light_ids_sunrise_color:
-                self.call_service(
-                    "light/turn_on",
-                    entity_id=light_id,
-                    brightness=self.lights_brightness_current,
-                    rgb_color=self.lights_rgb_color_current,
-                    transition=0,
-                )
+                if light_id in self.ready_devices:
+                    self.call_service(
+                        "light/turn_on",
+                        entity_id=light_id,
+                        brightness=self.lights_brightness_current,
+                        rgb_color=self.lights_rgb_color_current,
+                        transition=0,
+                    )
+
             for light_id in self.start_wakeup_event.light_ids_static_color:
-                self.call_service(
-                    "light/turn_on",
-                    entity_id=light_id,
-                    brightness=self.lights_brightness_current,
-                    rgb_color=self.wakeup_config.lights_static_rgb_color,
-                    transition=0,
-                )
+                if light_id in self.ready_devices:
+                    self.call_service(
+                        "light/turn_on",
+                        entity_id=light_id,
+                        brightness=self.lights_brightness_current,
+                        rgb_color=self.wakeup_config.lights_static_rgb_color,
+                        transition=0,
+                    )
 
             for media_player in self.start_wakeup_event.media_players:
-                self.call_service("media_player/volume_set", entity_id=media_player, volume_level=self.media_players_volume_current)
+                if media_player in self.ready_devices:
+                    self.call_service("media_player/volume_set", entity_id=media_player, volume_level=self.media_players_volume_current)
 
             # runtime_since_start = datetime.now() - self.wakeup_config.routine_start_time
             # media_player_volume_current_percent = self.media_players_volume_current / self.wakeup_config.media_player_max_volume * 100
