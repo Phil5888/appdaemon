@@ -111,7 +111,7 @@ class WakeupConfig:
 
         self.lights_brightness_initial = 10
         self.lights_rgb_color_initial = [240, self.lights_rgb_helper, 40]
-        self.media_players_volume_initial = 0.02
+        self.media_players_volume_initial = 0.00
 
         self.max_sunrise_wakeup_runtime_in_seconds = event_config.max_sunrise_wakeup_runtime * 60
 
