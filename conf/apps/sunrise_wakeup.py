@@ -246,6 +246,8 @@ class SunriseWakeupApp(Hass):
                     return
                 else:
                     self.log("WakeupApp :: ROUTINE :: Not all devices are ready to start. Starting with available devices", level="WARNING")
+                    self.log("WakeupApp :: ROUTINE :: Start increase volume and brightness", level="INFO")
+                    self.run_in(self.wakeup_routine, 4)
         else:
             self.log("WakeupApp :: ROUTINE :: Start increase volume and brightness", level="INFO")
             self.run_in(self.wakeup_routine, 4)
