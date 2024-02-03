@@ -184,7 +184,7 @@ class SunriseWakeupApp(Hass):
         for media_player in start_wakeup_event.media_players:
             if media_player not in self.ready_devices:
                 self.call_service(
-                    "media_player/turn_on",
+                    "media_player/pause",
                     entity_id=media_player,
                 )
                 self.call_service(
