@@ -184,9 +184,16 @@ class SunriseWakeupApp(Hass):
         for media_player in start_wakeup_event.media_players:
             if media_player not in self.ready_devices:
                 self.call_service(
-                    "media_player/pause",
+                    "media_player/media_pause",
                     entity_id=media_player,
                 )
+                self.call_service(
+                    "media_player/play_media",
+                    entity_id=self.start_wakeup_event.media_players[0],
+                    media_content_id=self.wakeup_config.media_playlist,
+                    media_content_type="playlist",
+                )
+
                 self.call_service(
                     "media_player/volume_set",
                     entity_id=media_player,
@@ -249,7 +256,6 @@ class SunriseWakeupApp(Hass):
                 if len(self.ready_devices) == 0:
                     self.log("WakeupApp :: ROUTINE :: No devices are ready to start. Aborting", level="WARNING")
                     self.stop_sunrise_routine()
-                    return
                 else:
                     self.log("WakeupApp :: ROUTINE :: Not all devices are ready to start. Starting with available devices", level="WARNING")
                     self.log("WakeupApp :: ROUTINE :: Start increase volume and brightness", level="INFO")
