@@ -192,14 +192,13 @@ class SunriseWakeupApp(Hass):
                     entity_id=self.start_wakeup_event.media_players[0],
                     media_content_id=self.wakeup_config.media_playlist,
                     media_content_type="playlist",
-                    volume_level=self.wakeup_config.media_players_volume_initial,
                 )
 
-                # self.call_service(
-                #     "media_player/volume_set",
-                #     entity_id=media_player,
-                #     volume_level=self.wakeup_config.media_players_volume_initial,
-                # )
+                self.call_service(
+                    "media_player/volume_set",
+                    entity_id=media_player,
+                    volume_level=self.wakeup_config.media_players_volume_initial,
+                )
 
         self.log("WakeupApp :: ROUTINE :: Initial State set", level="INFO")
 
