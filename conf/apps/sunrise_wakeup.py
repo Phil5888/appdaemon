@@ -365,6 +365,8 @@ class SunriseWakeupApp(Hass):
 
         self.turn_off_devices()
 
+        self.ready_devices = []
+
         self.log("WakeupApp :: ROUTINE :: Stopped", level="INFO")
 
     def stop_event_sunrise_wakeup(self, event_name, data, kwargs):
