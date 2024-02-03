@@ -236,6 +236,7 @@ class SunriseWakeupApp(Hass):
                     self.log(f"WakeupApp :: ROUTINE :: Device: {device} not ready", level="INFO")
             self.retry_count += 1
             if self.retry_count < self.max_retry_count:
+                self.log(f"WakeupApp :: ROUTINE :: Not all devices ready. Retry to activate. Retry count: {self.retry_count}", level="INFO")
                 self.set_initial_devices_state(self.start_wakeup_event)
                 self.run_in(self.check_devices_ready, 5)
             else:
@@ -245,8 +246,9 @@ class SunriseWakeupApp(Hass):
                     return
                 else:
                     self.log("WakeupApp :: ROUTINE :: Not all devices are ready to start. Starting with available devices", level="WARNING")
-        self.log("WakeupApp :: ROUTINE :: Start increase volume and brightness", level="INFO")
-        self.run_in(self.wakeup_routine, 4)
+        else:
+            self.log("WakeupApp :: ROUTINE :: Start increase volume and brightness", level="INFO")
+            self.run_in(self.wakeup_routine, 4)
 
     def start_event_sunrise_wakeup(self, event_name, data, kwargs):
         """Sunrise Wake Up start event handler"""
