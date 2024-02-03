@@ -147,7 +147,7 @@ class SunriseWakeupApp(Hass):
 
     ready_devices = []
     # devices_ready_to_start_handles = []
-    # state_change_handles = []
+    state_change_handles = []
 
     def initialize(self):
         """Initialize the app"""
@@ -222,6 +222,7 @@ class SunriseWakeupApp(Hass):
                 if light_state == "on":
                     self.log(f"WakeupApp :: EVENT :: Light: {light_id} is now ready", level="INFO")
                     self.ready_devices.append(light_id)
+                    self.state_change_handles.append(self.listen_state(self.device_state_changed, light_id))
 
         for media_player in self.start_wakeup_event.media_players:
             if media_player not in self.ready_devices:
@@ -229,6 +230,7 @@ class SunriseWakeupApp(Hass):
                 if media_player_state == "playing":
                     self.log(f"WakeupApp :: EVENT :: Media Player: {media_player} is now ready", level="INFO")
                     self.ready_devices.append(media_player)
+                    self.state_change_handles.append(self.listen_state(self.device_state_changed, media_player))
 
         if len(self.ready_devices) != len(self.start_wakeup_event.light_ids_sunrise_color + self.start_wakeup_event.light_ids_static_color + self.start_wakeup_event.media_players):
             for device in self.start_wakeup_event.light_ids_sunrise_color + self.start_wakeup_event.light_ids_static_color + self.start_wakeup_event.media_players:
@@ -343,9 +345,9 @@ class SunriseWakeupApp(Hass):
         """Stop the sunrise routine"""
 
         self.log("WakeupApp :: ROUTINE :: Stopping", level="INFO")
-        # for handle in self.state_change_handles:
-        #     self.cancel_listen_state(handle)
-        # self.state_change_handles = []
+        for handle in self.state_change_handles:
+            self.cancel_listen_state(handle)
+        self.state_change_handles = []
 
         self.sunrise_wakeup_running = False
         self.abort_sunrise_wakeup = True
