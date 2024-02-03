@@ -186,7 +186,6 @@ class SunriseWakeupApp(Hass):
                 self.call_service(
                     "media_player/turn_on",
                     entity_id=media_player,
-                    volume_level=self.wakeup_config.media_players_volume_initial,
                 )
                 self.call_service(
                     "media_player/volume_set",
